@@ -1,0 +1,527 @@
+//:snippets: ../../../target/generated-snippets
+# 视频操作接口说明书(SDK 转HTTP API)
+
+## 概要
+|===
+|version|date|author|desc
+|1.0.3|2020-03-04|weltoninfo|增加返回字段说明
+|1.0.2|2020-02-25|weltoninfo|增加说明信息
+|===
+
+*HTTP应答通用结构*
+[source,javascript]
+--
+{
+    "code":0,              // 返回结果
+    "message":"ok",    // 错误信息
+    "desc":"错误描述",  // 错误描述
+    "data":{},               // 返回数据
+    "timestamp":1582618962466 //返回时间戳
+}
+--
+NOTE: 本文档API接口的响应都采用此通用格式，各具体接口的应答描述中仅描述data的内容。
+
+*流URL格式*
+
+监控头视频：rtsp://ip:port/live/avPath, 示例：`rtsp://192.168.1.80:554/live/0Q0v0Q0v3Wk8C81`
+（avPath对应通道名）
+
+远程录像：
+
+NOTE: 通过rtsp取流需要在视频设备接入协议配置为RTSP(RtspHost)
+
+*错误码*
+
+请参考NPSDKErrors.h（SDK），ErrorHelper.h（浏览器插件）
+
+== np_netsdk
+
+### 基本功能
+#### 用户登录
+*URL*:`/api/np/login`
+
+*描述*：登录视频服务器，获取操作凭据，该凭据用于后续调用，如果客户端通过SDK浏览器插件打开视频，也需要使用此凭据
+
+*请求* :
+|===
+|字段|类型|说明
+|host|String|视频服务器
+|port|int|SDK服务接入端口，默认2015
+|username|String|登录用户
+|password|String|登录密码
+|===
+*响应*:（JSON，$.data描述)
+|===
+|字段|类型|说明
+|字符串值|String|登录凭证
+|===
+
+[source,javascript]
+"ticket"
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-login/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-login/http-response.adoc[]
+
+#### 用户退出
+*URL*:`/api/np/logout`
+
+*描述*: 登出服务器
+
+*请求* :
+|===
+|字段|类型|说明
+|ticket|String|登录凭据
+|===
+
+*响应*:
+（略）
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-logout/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-logout/http-response.adoc[]
+
+#### 获取ticket
+*URL*:`/api/np/ticket`
+
+*描述*: 获取ticket，用于前端通过SDK浏览器插件打开视频用，目前使用login后也返回了ticket，此方法可忽略
+
+*请求* :
+|===
+|字段|类型|说明
+|host|String|视频服务器
+|port|int|SDK服务接入端口，默认2015
+|username|String|登录用户
+|password|String|登录密码
+|===
+*响应*:（JSON，$.data描述)
+[source,javascript]
+"ticket"
+
+*调用示例*:
+
+
+.request
+include::{snippets}/np-net-ticket/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-ticket/http-response.adoc[]
+
+### 列表功能
+#### 摄像头通道列表
+*URL*:`/api/np/list/camera`
+
+*描述*: 获取通道列表（视频通道）,获取视频流时根据通道名称进行组装成请求URL
+
+*请求* :
+|===
+|字段|类型|说明
+|ticket|String|登录凭据
+|===
+
+*响应*:
+
+|===
+|name|String|通道名称，通道标识,用于打开视频流
+|title|String|通道标题 
+|host|String|通道所属设备名称 
+|path|String|通道所在路径（通常用来组织目录结构） 
+|level|int|通道等级（与用户等级相关联） 
+|avType|int|通道类型，0－不支持云台；1－支持云台；其它－未使用 
+|===
+
+[source,javascript]
+--
+[
+{
+   "avType" : 0,
+   "host" : "cc3cae4a-1894-4cbb-a129-d05025bb4a69",
+   "hostTitle" : "192.168.1.64",
+   "hostType" : 1,
+   "isCurNode" : 1,
+   "level" : null,
+   "name" : "0Q0v0Q0v3Wk8C81",
+   "org" : "e5474491-8ee9-4bda-a0a0-84ffba954517",
+   "orgPath" : "本部",
+   "path" : "本部/192.168.1.64",
+   "title" : "192.168.1.64_1"
+},
+{
+   "avType" : 0,
+   "host" : "7403e09a-42e2-4d79-b9e3-582801a68d25",
+   "hostTitle" : "192.168.1.65",
+   "hostType" : 1,
+   "isCurNode" : 1,
+   "level" : null,
+   "name" : "0Q0v0Q0v3Wk8C91",
+   "org" : "e5474491-8ee9-4bda-a0a0-84ffba954517",
+   "orgPath" : "本部",
+   "path" : "本部/192.168.1.65",
+   "title" : "192.168.1.65_1"
+}
+]
+--
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-list-camera/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-list-camera/http-response.adoc[]
+
+#### 所有设备列表
+*URL*:`/api/np/list/objects`
+
+*描述*: 获取通道列表（视频通道）
+
+*请求* :
+|===
+|字段|类型|说明
+|ticket|String|登录凭据
+|type|int|对象类型，参考PVG10.1客户端SDK使用手册NPNetObjectType定义
+|===
+
+*响应*:
+
+.设备类型[type=4]
+|===
+|字段|类型|说明
+|ip|String|设备IP地址
+|name|String|设备名称
+|title|String|设备标题
+|url |String|设备地址，格式：“组件名:设备IP:设备端口/password=设备密码&username=设备用户名”，如：hikhost:192.168.106.140:8000/password=12345&username=admin 
+|===
+.通道类型[type=16]
+|===
+|同/api/np/list/camera
+|===
+其他类型描述请参考《PVG客户端SDK使用手册》NPNetObjectType详细描述
+
+type=4(设备)
+[source,javascript]
+--
+[
+{
+   "ip" : "192.168.1.65",
+   "name" : "7403e09a-42e2-4d79-b9e3-582801a68d25",
+   "title" : "192.168.1.65",
+   "url" : "hikhost:192.168.1.65:8000",
+   "voiceTalk" : 1
+},
+{
+   "ip" : "192.168.1.64",
+   "name" : "cc3cae4a-1894-4cbb-a129-d05025bb4a69",
+   "title" : "192.168.1.64",
+   "url" : "rtsphost:192.168.1.64:554",
+   "voiceTalk" : 1
+}
+]
+--
+
+type=16（通道），同/api/np/list/camera
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-list-objects/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-list-objects/http-response.adoc[]
+
+#### 不在线摄像头通道
+*URL*:`/api/np/list/offline`
+
+*描述*: 获取设备状态，接口返回所有离线通道列表（通道列表，非设备列表）
+
+*请求* :
+|===
+|字段|类型|说明
+|ticket|String|登录凭据
+|===
+
+*响应*:
+
+.不在线视频通道列表
+|===
+|字段|类型|说明
+|数组元素|String|通道名
+|===
+
+[source,javascript]
+--
+[
+    "0Q0v0Q0v3Wk8C91",
+    "0Q0v0Q0v3Wk8CA1"
+]
+--
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-list-offline/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-list-offline/http-response.adoc[]
+
+### 事件订阅
+#### 订阅
+*URL*:`/api/np/event/subscribe`
+
+*描述*: 订阅事件，给定的接收请求接口
+
+*请求* :
+|===
+|字段|类型|说明
+|ticket|String|登录凭据
+|server|String|接收请求的主机URI，http://ip:port
+|path|String|接收请求接口URI, /receive, 接口为POST方式
+|===
+
+*响应*:
+（略）
+
+*接收消息结构*
+
+|===
+|字段|类型|说明
+|nodeid|String|视频服务器节点
+|device|Sting|报警设备
+|type|int|事件类型
+|status|int|事件状态,1为报警态,0为正常态
+|time|String|报警发生时间戳
+|===
+
+.事件类型
+|===
+|-1|NPNET_EVENT_UNKNOWN|未知事件
+|0|NPNET_EVENT_VIDEO_LOST|视频丢失发生/恢复
+|1|NPNET_EVENT_MOTION|运动感知发生/恢复
+|2|NPNET_EVENT_VIDEO_HIDE|视频遮挡发生/恢复
+|3|NPNET_EVENT_VIDEO_BROKEN|视频断线发生/恢复
+|10|NPNET_EVENT_ALARM_IN|报警输入报警/恢复
+|12|NPNET_EVENT_CAMERA_LOCK|摄像机锁定/恢复
+|14|NPNET_EVENT_DIGITAL_STREAM|数字码流传输发起/停止
+|15|NPNET_EVENT_MANUAL_RECORD|手动录像发起/停止
+|16|NPNET_EVENT_DEVICE_BROKEN|设备发生断线/恢复
+|17|NPNET_EVENT_ROFS_ERROR|ROFS报告的错误发生/恢复
+|50|NPNET_EVENT_SYSTEM_INIT|系统初始化
+|51|NPNET_EVENT_USER_LOGIN|用户登入
+|52|NPNET_EVENT_USER_LOGOUT|用户注销
+|53|NPNET_EVENT_MONITOR_SWITCH|监视器切换
+|54|NPNET_EVENT_PTZ|云台控制
+|55|NPNET_EVENT_OPEN_VIDEO_FILE|打开视频文件
+|56|NPNET_EVENT_CLOSE_VIDEO_FILE|关闭视频文件
+|57|NPNET_EVENT_ALARM_INFO|报警设备报告信息
+|58|NPNET_EVENT_VA_ALARM|智能报警事件
+|59|NPNET_EVENT_OSD_CHANGE|OSD信息改变
+|100|NPNET_EVENT_CPU_TOO_BUSY|CPU使用率过高报警
+|101|NPNET_EVENT_MEMORY_TOO_HIGH|内存使用率过高报警
+|102|NPNET_EVENT_DISK_ARRAY_WRITE_FAILED|磁盘阵列不能写
+|103|NPNET_EVENT_DISK_ARRAY_ERROR|磁盘阵列错误 
+|===
+
+[source,javascript]
+--
+{
+   "channel" : "",
+   "channelnumber" : "",
+   "device" : "cc3cae4a-1894-4cbb-a129-d05025bb4a69",
+   "level" : 0,
+   "nodeid" : "9e6c54bc-e946-448a-9ace-8c73d756bffc",
+   "param" : "0|||",
+   "serverid" : "192.168.1.80:2020",
+   "status" : 1,
+   "time" : "1582871685168",
+   "type" : 16
+}
+--
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-event-subscribe/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-event-subscribe/http-response.adoc[]
+
+#### 取消订阅
+*URL*:`/api/np/event/cancel`
+
+*描述*: 取消订阅
+
+*请求* :
+|===
+|字段|类型|说明
+|ticket|String|登录凭据
+|===
+
+*响应*:
+（略）
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-event-cancel/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-event-cancel/http-response.adoc[]
+
+### 云台控制
+#### 云台控制
+*URL*:`/api/np/ptz/control`
+
+*描述*: 云台的每一个动作都要调用该接口两次,前面两个参数一样,只是param一次为非0,一次为0。
+
+*请求* :
+|===
+|字段|类型|说明
+|ticket|String|登录凭据
+|avPath|String|AV对象名
+|cmd|int|云台控制命令，参考《PVG10.1客户端SDK使用手册》NPNetPTZCommand定义
+|param|String|让云台停止动作还是开始动作 >0-以设定速度开始 0-停止,最大为15
+|===
+
+*响应*:
+（略）
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-ptz-control/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-ptz-control/http-response.adoc[]
+
+#### 3D云台控制
+*URL*:`/api/np/ptz/control3d`
+
+*描述*: 3D云台控制
+
+*请求* :
+|===
+|字段|类型|说明
+|ticket|String|登录凭据
+|avPath|String|AV对象名
+|direct |int|控制命令,0 - 放大、1 - 缩小、2 - 跟随、其他 - 未使用 
+|x|int|控制参数,取值范围[0 - 1] 
+|y|int|控制参数,取值范围[0 - 1] 
+|w|int|控制参数,取值范围[0 - 1] 
+|h|int|控制参数,取值范围[0 - 1] 
+|===
+
+*响应*:
+（略）
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-ptz-control3d/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-ptz-control3d/http-response.adoc[]
+
+#### PTZ控制锁定
+*URL*:`/api/np/ptz/lock`
+
+*描述*: PTZ控制锁定
+
+*请求* :
+|===
+|字段|类型|说明
+|ticket|String|登录凭据
+|avPath|String|AV对象名
+|lockTime|int|PTZ控制锁定时间 单位为秒(s)
+|===
+
+*响应*:
+（略）
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-ptz-lock/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-ptz-lock/http-response.adoc[]
+
+#### PTZ控制锁定(auxControl)
+*URL*:`/api/np/ptz/aux`
+
+*描述*: PTZ控制锁定
+
+*请求* :
+|===
+|字段|类型|说明
+|ticket|String|登录凭据
+|avPath|String|AV对象名
+|num|int|开关编号
+|control|boolean|控制参数：TRUE - 打开；FALSE － 关闭
+|===
+
+*响应*:
+（略）
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-ptz-aux/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-ptz-aux/http-response.adoc[]
+
+### 远程录像
+#### 录像查询
+*URL*:`/api/np/record/list`
+
+*描述*: 查询录像
+
+*请求* :
+|===
+|字段|类型|说明
+|ticket|String|登录凭据
+|avPath|String|摄像机通道名称
+|vodType|int|0-服务器录像, 非0 录像所在的层数,最大值为256
+|beginTime|String|起始时间, 格式："2012-01-01 13:20:00.000" 或 "20120101132000000" 
+|endTime|String|结束时间（不含） 
+|===
+
+*响应*:
+|===
+|字段|类型|说明
+|avPath|String|摄像机通道名称
+|beginTime|String|时间段开始时间
+|endTime|String|时间段结束时间（不含）
+|===
+
+[source,javascript]
+--
+[
+  {
+    "avPath":"0Q0v0Q0v3Wk8C81",
+    "beginTime":"2020-02-28 14:08:44.126",
+    "endTime":"2020-02-28 14:15:27.148"
+  },
+  {
+    "avPath":"0Q0v0Q0v3Wk8C81",
+    "beginTime":"2020-02-28 14:24:38.198",
+    "endTime":"2020-02-28 14:28:39.327"
+  }
+]
+--
+
+*调用示例*:
+
+.request
+include::{snippets}/np-net-record-list/http-request.adoc[]
+
+.response
+include::{snippets}/np-net-record-list/http-response.adoc[]
